@@ -7,7 +7,11 @@
 [![PuLP](https://img.shields.io/badge/PuLP-HiGHS%20%2F%20CBC-orange.svg)](https://coin-or.github.io/pulp/)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063.svg?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Railway Live](https://img.shields.io/badge/Railway-Live%20Deployment-0B0D0E.svg?logo=railway&logoColor=white)](https://gridwise-llm-optimizer-production.up.railway.app)
 [![Tests Passing](https://img.shields.io/badge/Tests-81%2F81%20Passed-brightgreen.svg)](docs/TESTING.md)
+
+> **Live Production Service:** [`https://gridwise-llm-optimizer-production.up.railway.app`](https://gridwise-llm-optimizer-production.up.railway.app)  
+> **Interactive Swagger UI:** [`https://gridwise-llm-optimizer-production.up.railway.app/docs`](https://gridwise-llm-optimizer-production.up.railway.app/docs)
 
 ---
 
@@ -289,14 +293,22 @@ make run
 ### 1. Verify Health (`GET /health`)
 The `/health` endpoint is lightweight and deterministic:
 
-#### Using `curl`:
+#### Using `curl` (Local vs. Live Railway):
 ```bash
+# Local
 curl http://127.0.0.1:8000/health
+
+# Live Railway Production
+curl https://gridwise-llm-optimizer-production.up.railway.app/health
 ```
 
 #### Using PowerShell:
 ```powershell
+# Local
 Invoke-RestMethod -Uri http://127.0.0.1:8000/health -Method GET
+
+# Live Railway Production
+Invoke-RestMethod -Uri https://gridwise-llm-optimizer-production.up.railway.app/health -Method GET
 ```
 
 #### Expected Response (`200 OK`):
@@ -312,7 +324,13 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/health -Method GET
 
 #### Using `curl`:
 ```bash
+# Local
 curl -X POST http://127.0.0.1:8000/optimize-energy \
+  -H "Content-Type: application/json" \
+  -d @test_request.json
+
+# Live Railway Production
+curl -X POST https://gridwise-llm-optimizer-production.up.railway.app/optimize-energy \
   -H "Content-Type: application/json" \
   -d @test_request.json
 ```
@@ -320,7 +338,12 @@ curl -X POST http://127.0.0.1:8000/optimize-energy \
 #### Using PowerShell:
 ```powershell
 $payload = Get-Content -Raw -Path test_request.json
+
+# Local
 Invoke-RestMethod -Uri http://127.0.0.1:8000/optimize-energy -Method POST -ContentType "application/json" -Body $payload
+
+# Live Railway Production
+Invoke-RestMethod -Uri https://gridwise-llm-optimizer-production.up.railway.app/optimize-energy -Method POST -ContentType "application/json" -Body $payload
 ```
 
 #### Response Structure:
@@ -471,6 +494,14 @@ docker run --rm -p 8000:8000 -e LLM_PROVIDER=mock gridwise-llm-optimizer:latest
 
 ## 15. Deployment & Platform Notes
 
+### Live Railway Production Deployment
+The service is actively deployed and running in production on Railway:
+- **Base Endpoint**: [`https://gridwise-llm-optimizer-production.up.railway.app`](https://gridwise-llm-optimizer-production.up.railway.app)
+- **Health Check**: [`https://gridwise-llm-optimizer-production.up.railway.app/health`](https://gridwise-llm-optimizer-production.up.railway.app/health)
+- **Interactive OpenAPI / Swagger UI**: [`https://gridwise-llm-optimizer-production.up.railway.app/docs`](https://gridwise-llm-optimizer-production.up.railway.app/docs)
+- **Live Verification Status**: All 10 public scenarios verified passing (`Mean Latency: 1382.9 ms`, 0 errors, 100% replay audit valid).
+
+### Platform Architecture
 - **Docker Environment**: Linux Debian 12 container (`python:3.11-slim`), non-root `appuser` (UID 1000).
 - **Puku / Poridhi Support**: Integrated `PUKU_API_KEY` configuration option in `app/config.py` for headless cloud sandboxes and remote runners.
 - **Reverse Proxy Ready**: Supports deployment behind Nginx, Caddy, or cloud load balancers.
@@ -545,7 +576,32 @@ gridwise-llm-optimizer/
 
 ## 17. Reviewer / Judge 60-Second Quick Verification Checklist
 
-Judges can verify the entire submission from scratch in under 60 seconds:
+### Option A: Zero-Install Instant Live Verification (Fastest)
+
+Reviewers can verify the live, actively hosted Railway service in seconds without installing local packages:
+
+```bash
+# 1. Health check
+curl https://gridwise-llm-optimizer-production.up.railway.app/health
+# Expected: {"status":"ok"}
+
+# 2. Run single scenario optimization
+curl -X POST https://gridwise-llm-optimizer-production.up.railway.app/optimize-energy \
+  -H "Content-Type: application/json" \
+  -d @test_request.json
+
+# 3. Verify all 10 public benchmark cases against live Railway service
+python scripts/run_public_cases.py https://gridwise-llm-optimizer-production.up.railway.app
+# Expected: Total: 10/10 passed.
+
+# 4. Run local judge evaluation against live Railway service
+python scripts/local_judge.py --url https://gridwise-llm-optimizer-production.up.railway.app --input samples/public_cases.json
+# Expected: 10/10 Passed (0 Failed) | Mean Latency: ~1380 ms
+```
+
+### Option B: Local Clean Environment Reproduction
+
+Judges can verify the entire submission from scratch locally:
 
 ```bash
 # 1. Clone repository & cd
