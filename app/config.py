@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY_BACKUP_3: Optional[SecretStr] = None
     GEMINI_API_KEY_BACKUP_4: Optional[SecretStr] = None
 
+    # Optional Puku Platform Key
+    PUKU_API_KEY: Optional[SecretStr] = None
+
     GEMINI_MODEL: str = "gemini-flash-lite-latest"
     GEMINI_REQUEST_TIMEOUT_SECONDS: float = 1.5
     GEMINI_TOTAL_DEADLINE_SECONDS: float = 4.0
