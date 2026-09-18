@@ -53,3 +53,13 @@ class ConfigurationError(GridWiseError):
 
     def __init__(self, message: str, details: Optional[dict] = None):
         super().__init__(message, status_code=500, details=details)
+
+
+class GeminiCredentialError(LLMProviderError):
+    """Raised when a Gemini credential fails, tracking credential label without exposing secrets."""
+
+    def __init__(self, credential_label: str, reason: str, details: Optional[dict] = None):
+        msg = f"Gemini credential '{credential_label}' failed: {reason}"
+        super().__init__(msg, details=details)
+        self.credential_label = credential_label
+        self.reason = reason

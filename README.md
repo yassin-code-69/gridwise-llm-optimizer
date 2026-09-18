@@ -119,13 +119,27 @@ cp .env.example .env
 | Variable | Type | Default | Description |
 |---|---|---|---|
 | `LLM_PROVIDER` | string | `mock` | Selected LLM backend (`mock`, `openai`, `gemini`) |
-| `LLM_MODEL` | string | `gpt-4o-mini` | Model name identifier |
-| `LLM_API_KEY` | string | `None` | API key for hosted LLM provider |
-| `LLM_TIMEOUT_SECONDS` | float | `5.0` | Timeout per model inference request |
-| `LLM_MAX_RETRIES` | int | `2` | Bounded retries for provider/validation failures |
+| `GEMINI_API_KEY_PRIMARY` | string | `None` | Primary Gemini API credential (always attempted first) |
+| `GEMINI_API_KEY_BACKUP_1` | string | `None` | 1st backup Gemini credential (failover target) |
+| `GEMINI_API_KEY_BACKUP_2` | string | `None` | 2nd backup Gemini credential (failover target) |
+| `GEMINI_API_KEY_BACKUP_3` | string | `None` | 3rd backup Gemini credential (failover target) |
+| `GEMINI_API_KEY_BACKUP_4` | string | `None` | 4th backup Gemini credential (failover target) |
+| `GEMINI_MODEL` | string | `gemini-flash-lite-latest` | Gemini model name |
+| `GEMINI_REQUEST_TIMEOUT_SECONDS` | float | `1.5` | Per-attempt timeout budget |
+| `GEMINI_TOTAL_DEADLINE_SECONDS` | float | `4.0` | Maximum total deadline across all failover attempts |
+| `GEMINI_MAX_ATTEMPTS` | int | `3` | Maximum attempt budget per request |
 | `PORT` | int | `8000` | Port for Uvicorn API server |
 | `HOST` | string | `0.0.0.0` | Host binding for server |
 | `LOG_LEVEL` | string | `INFO` | Logging verbosity |
+
+### Primary-First Credential Failover & Circuit Breaker
+
+The system implements a resilient, deadline-aware failover architecture for Gemini credentials:
+1. **Primary-First Selection**: As long as the primary credential is healthy, it is exclusively utilized (no round-robin during normal operations).
+2. **Permanent Invalidation on Auth Error**: If a credential returns HTTP 401/403 (`API_KEY_INVALID`), it is marked `INVALID` for the lifetime of the process and subsequent requests seamlessly bypass it to use `backup_1`.
+3. **Lightweight Circuit Breaker**: Transient transport timeouts or server errors trigger a circuit breaker after reaching `GEMINI_CIRCUIT_FAILURE_THRESHOLD` consecutive failures, temporarily disabling the credential for a 30s cooldown before automated recovery.
+4. **Deadline & Attempt Budget**: Total execution is bounded by `GEMINI_TOTAL_DEADLINE_SECONDS`. Failover halts if remaining time $\le 0.3$s to prevent latency violations.
+5. **Zero Secret Leakage**: Credentials are typed as Pydantic `SecretStr`, masked in all exceptions, and referenced only by semantic labels (`primary`, `backup_1`, etc.) in structured logs.
 
 > **Security Note**: Never commit `.env` or API keys. The repository `.gitignore` strictly prevents secrets from being committed.
 
@@ -347,6 +361,7 @@ gridwise-llm-optimizer/
 │   ├── llm/
 │   │   ├── __init__.py
 │   │   ├── base.py                 # Abstract DirectiveInterpreter
+│   │   ├── gemini_key_manager.py   # Primary + backup credential health & circuit breaker
 │   │   ├── prompts.py              # System prompt and instruction templates
 │   │   ├── interpreter.py          # Provider factory with bounded retries
 │   │   └── providers/
